@@ -1,4 +1,4 @@
-# Gambia-air-pollution-pneumococcal-colonisation
+# The Gambia-air-pollution-pneumococcal-colonisation
 
 Longitudinal personal environmental exposure and *Streptococcus pneumoniae*
 colonisation in a cohort of children 5-14 years old in rural Gambia.
