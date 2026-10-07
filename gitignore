@@ -1,0 +1,16 @@
+# Study data - never commit (participant-level)
+data/
+*.xlsx
+*.csv
+*.rds
+*.RData
+*.rda
+
+# Generated outputs
+output/
+
+# R / RStudio
+.Rhistory
+.Rproj.user/
+.Rapp.history
+*.Rproj
