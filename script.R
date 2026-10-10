@@ -339,25 +339,42 @@ write_csv(tabS1, "output/TableS1_Monitored_Retained.csv")
 season_cols <- c(Dry = "#E67E22", Wet = "#2980B9")
 
 # ---- Figure 1: study map ----------------------------------------------------
-library(sf); library(rnaturalearth); library(rnaturalearthdata); library(ggspatial)
+library(tidyverse); library(sf); library(rnaturalearth)
+library(rnaturalearthdata); library(ggspatial)
+
+dir_in <- "data"; dir_out <- "output"
+dir.create(dir_in,  showWarnings = FALSE)
+dir.create(dir_out, showWarnings = FALSE)
+out <- function(f) file.path(dir_out, f)
+
+# Base maps (country outlines)
 africa  <- ne_countries(continent = "Africa", scale = "medium", returnclass = "sf")
 gambia  <- ne_countries(country = "Gambia",   scale = "medium", returnclass = "sf")
 senegal <- ne_countries(country = "Senegal",  scale = "medium", returnclass = "sf")
 
+# Gambia regions (GADM 4.1; downloaded once, then read from data/)
 gadm_file <- file.path(dir_in, "gadm41_GMB_1.json")
-if (!file.exists(gadm_file))
-  download.file("https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_GMB_1.json", gadm_file)
+if (!file.exists(gadm_file)) {
+  download.file("https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_GMB_1.json",
+                gadm_file, mode = "wb")
+}
 gambia_adm1 <- st_read(gadm_file, quiet = TRUE) |>
-  mutate(region_name = recode(NAME_1, LowerRiver = "Lower River Region",
-                              MaccarthyIsland = "Central River Region",
-                              NorthBank = "North Bank Region", UpperRiver = "Upper River Region",
-                              Western = "Western Region"))
-region_cols <- c("Lower River Region" = "#FF8D85", "Central River Region" = "#F9E79F",
-                 "Upper River Region" = "#D7BDE2", "North Bank Region" = "#D5F5E3",
-                 "Western Region" = "#A8D5A2")
+  mutate(region_name = case_when(
+    NAME_1 == "LowerRiver"      ~ "Lower River Region",
+    NAME_1 == "MaccarthyIsland" ~ "Central River Region",
+    NAME_1 == "NorthBank"       ~ "North Bank Region",
+    NAME_1 == "UpperRiver"      ~ "Upper River Region",
+    NAME_1 == "Western"         ~ "West Coast Region",
+    TRUE                        ~ NAME_1))
+
+region_cols <- c("Lower River Region"   = "#FF8D85", "Central River Region" = "#F9E79F",
+                 "Upper River Region"   = "#D7BDE2", "North Bank Region"    = "#D5F5E3",
+                 "West Coast Region"    = "#A8D5A2")
+
 banjul <- st_as_sf(data.frame(name = "Banjul", lon = -16.577, lat = 13.453),
                    coords = c("lon", "lat"), crs = 4326)
 
+# ---- Panel A: Africa --------------------------------------------------------
 p_africa <- ggplot() +
   geom_sf(data = africa, fill = "#D5D8DC", colour = "white", linewidth = .25) +
   geom_sf(data = gambia, fill = "#E74C3C", colour = "#C0392B", linewidth = .6) +
@@ -365,7 +382,9 @@ p_africa <- ggplot() +
   theme_void() +
   theme(panel.background = element_rect(fill = "#AED6F1", colour = NA),
         panel.border = element_rect(colour = "#888888", fill = NA, linewidth = .6))
-ggsave(out("Figure1A_AfricaMap.png"), p_africa, width = 12, height = 5.5, dpi = 300, bg = "white")
+ggsave("output/Figure1A_AfricaMap.png", p_africa, width = 12, height = 5.5, dpi = 300, bg = "white")
+
+# ---- Panel B: The Gambia ----------------------------------------------------
 
 p_gambia <- ggplot() +
   geom_sf(data = senegal, fill = "#E8E8E3", colour = "white", linewidth = .3) +
@@ -373,7 +392,8 @@ p_gambia <- ggplot() +
   scale_fill_manual(values = region_cols, na.value = "#DDDDDD") +
   geom_sf(data = banjul, shape = 8, size = 4, stroke = .9) +
   geom_sf_label(data = banjul, aes(label = name), nudge_y = .04, size = 2.8, fontface = "bold") +
-  geom_sf_text(data = gambia_adm1, aes(label = region_name), size = 4, check_overlap = TRUE) +
+  geom_sf_text(data = filter(gambia_adm1, NAME_1 != "Banjul"),
+               aes(label = region_name), size = 4, check_overlap = TRUE) +
   annotate("point", x = -16.193, y = 13.206, shape = 21, size = 3.5,
            colour = "#C0392B", fill = "#E74C3C") +
   annotate("label", x = -16.193, y = 13.155, label = "Foni Bintang-Karanai District",
@@ -387,7 +407,8 @@ p_gambia <- ggplot() +
   labs(x = "Longitude", y = "Latitude") +
   theme_classic(base_size = 11) +
   theme(panel.background = element_rect(fill = "#AED6F1", colour = NA), legend.position = "none")
-ggsave(out("Figure1B_GambiaMap.png"), p_gambia, width = 12, height = 5.5, dpi = 300, bg = "white")
+
+ggsave("output/Figure1B_GambiaMap.png", p_gambia, width = 12, height = 5.5, dpi = 300, bg = "white")
 
 
 # Figure 2: monthly exposure
